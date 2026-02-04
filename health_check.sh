@@ -1,4 +1,26 @@
 #!/bin/bash
+VERSION="1.1.0"
+
+WARN_DISK=80
+CRIT_DISK=90
+OUTPUT_DIR="."
+EXIT_STATUS=0
+show_help() {
+  echo "Linux System Health Checker (v$VERSION)"
+  echo "Usage: ./health_check.sh [options]"
+  echo ""
+  echo "Options:"
+  echo "  -w, --warn <percent>     Disk warning threshold (default: 80)"
+  echo "  -c, --crit <percent>     Disk critical threshold (default: 90)"
+  echo "  -o, --output <dir>       Output directory for report"
+  echo "  -h, --help               Show this help message"
+  echo ""
+  echo "Exit codes:"
+  echo "  0 OK"
+  echo "  1 WARNING"
+  echo "  2 CRITICAL"
+  echo "  3 UNKNOWN"
+}
 
 # ======================================
 # Linux System Health Checker Script
@@ -10,10 +32,34 @@
 # ======================================
 
 # Create a timestamped report file
-REPORT="health_report_$(date +%F_%H-%M-%S).txt"
-WARN_DISK=80
-CRIT_DISK=90
-EXIT_STATUS=0
+TIMESTAMP=$(date +"%F_%H-%M-%S")
+
+# -------- Argument Parsing --------
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -w|--warn) WARN_DISK="$2"; shift 2 ;;
+    -c|--crit) CRIT_DISK="$2"; shift 2 ;;
+    -o|--output) OUTPUT_DIR="$2"; shift 2 ;;
+    -h|--help) show_help; exit 0 ;;
+    *) echo "Unknown option: $1"; echo "Use --help"; exit 3 ;;
+  esac
+done
+
+# Validate thresholds
+if ! [[ "$WARN_DISK" =~ ^[0-9]+$ ]] || ! [[ "$CRIT_DISK" =~ ^[0-9]+$ ]]; then
+  echo "WARN and CRIT must be numbers."
+  exit 3
+fi
+
+if (( WARN_DISK >= CRIT_DISK )); then
+  echo "WARN must be less than CRIT."
+  exit 3
+fi
+
+mkdir -p "$OUTPUT_DIR"
+REPORT="${OUTPUT_DIR}/health_report_${TIMESTAMP}.txt"
+
+
 
 echo "======================================"
 echo "     Linux System Health Report"
